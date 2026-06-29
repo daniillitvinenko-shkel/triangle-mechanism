@@ -6,16 +6,16 @@ from shapely.geometry import Polygon, box
 
 # 1. Настройка веб-страницы
 st.set_page_config(
-    page_title="Интерактивная модель механизма",
+    page_title="Интерактивная модель триады",
     layout="centered",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="collapsed"
 )
 
-# Стилизация заголовков
-st.title("🔄 Интерактивная динамическая модель")
+# Обновленные заголовки по вашему запросу
+st.title("Интерактивная динамическая модель триады \"Бегущий треугольник\"")
 st.markdown("""
-Управляйте временем с помощью ползунка ниже. 
-Наблюдайте за вращением конструкции, сохранением горизонта жидкости под силой гравитации и смещением временной шкалы.
+Визуализация модели триады P/A/I "Бегущий треугольник" Даниила Литвиненко. Управляйте с помощью ползунка ниже.
+Наблюдайте за вращением конструкции, перетоком ренты (R) и смещением временной шкалы.
 """)
 
 # 2. Константы геометрии
@@ -27,18 +27,18 @@ R_out = 3.0
 R_in = 1.3     
 fill_fraction = 0.40  
 
-alpha_I = np.radians(-90)
-alpha_P = np.radians(150)
-alpha_A = np.radians(30)
+# ИСПРАВЛЕНО: Новая начальная фаза (треугольник стоит на плоскости I-A, P вверху)
+alpha_P = np.radians(90)    # Верхний угол
+alpha_I = np.radians(210)   # Нижний левый угол
+alpha_A = np.radians(-30)   # Нижний правый угол
 
 def rotate_point(x, y, angle):
     co, si = np.cos(angle), np.sin(angle)
     return x * co - y * si, x * si + y * co
 
-# 3. Элементы управления в интерфейсе сайта
-st.subheader("Управление моделью")
+# 3. Элементы управления
 current_year = st.slider(
-    "Выберите или введите год:", 
+    "Выберите год:", 
     min_value=float(start_year), 
     max_value=float(end_year), 
     value=float(start_year), 
@@ -56,7 +56,7 @@ ax.axis('off')
 angle_deg = - ((current_year - start_year) / years_per_rotation) * 360
 angle_rad = np.radians(angle_deg)
 
-# Координаты треугольников
+# Координаты треугольников с учетом новой начальной фазы
 v_out = np.array([
     rotate_point(R_out * np.cos(alpha_I), R_out * np.sin(alpha_I), angle_rad),
     rotate_point(R_out * np.cos(alpha_P), R_out * np.sin(alpha_P), angle_rad),
@@ -69,7 +69,7 @@ v_in = np.array([
     rotate_point(R_in * np.cos(alpha_A), R_in * np.sin(alpha_A), angle_rad)
 ])
 
-# Физика жидкости
+# Физика жидкости (автоматически адаптируется под новое положение)
 inner_poly = Polygon(v_in)
 y_min, y_max = np.min(v_in[:, 1]), np.max(v_in[:, 1])
 target_area = inner_poly.area * fill_fraction
@@ -101,7 +101,7 @@ poly_in_patch = patches.Polygon(v_in, closed=True, fill=False, edgecolor='#34495
 ax.add_patch(poly_out_patch)
 ax.add_patch(poly_in_patch)
 
-# Буквы P, A, I (орбитальные, всегда читаемые)
+# Буквы P, A, I (соответствуют индексам v_out: 0=I, 1=P, 2=A)
 labels = ['I', 'P', 'A']
 for i, pt in enumerate(v_out):
     vector = pt / np.linalg.norm(pt)
@@ -124,11 +124,13 @@ for y_val in range(start_year - 2, end_year + 3):
     x_pos = (y_val - current_year) * year_spacing
     
     if frame_x - 1 < x_pos < frame_x + frame_w + 1:
+        # ИСПРАВЛЕНО: Переключение цвета по round() вместо int() для точного попадания в рамку
+        is_current = (y_val == round(current_year))
         t_obj = ax.text(x_pos, frame_y + frame_h/2, str(y_val), 
                         ha='center', va='center', fontsize=15, 
-                        fontweight='bold', color='#c0392b' if y_val == int(current_year) else '#7f8c8d', 
+                        fontweight='bold', color='#c0392b' if is_current else '#7f8c8d', 
                         zorder=6)
         t_obj.set_clip_path(rect_frame)
 
-# 5. Вывод графика на веб-страницу
+# Вывод графики на страницу
 st.pyplot(fig, clear_figure=True)
