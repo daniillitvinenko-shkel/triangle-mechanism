@@ -47,4 +47,4 @@ current_year = st.slider(
 )
 
 # 4. Логика отрисовки (Matplotlib)
-fig, ax = plt.subplots(figsize
+fig, ax = plt.subplots(figsize)
